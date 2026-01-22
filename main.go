@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krabiworld/kusaibot/config"
@@ -48,6 +50,12 @@ func main() {
 		log.Fatal().Err(err).Msg("Cannot create Discord session")
 	}
 
+	var (
+		emojiMap = make(map[string]string)
+		mu       sync.RWMutex
+		re       = regexp.MustCompile(`:([a-zA-Z0-9_]+):`)
+	)
+
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Info().Msgf("Logged in as: %s#%s", s.State.User.Username, s.State.User.Discriminator)
 	})
@@ -86,7 +94,19 @@ func main() {
 				log.Error().Err(err).Msg("Cannot generate tokens")
 			}
 
-			_, err = s.ChannelMessageSendReply(r.ChannelID, strings.Trim(tokens.Text, "\x02\x03 "), r.Reference())
+			msg := strings.Trim(tokens.Text, "\x02\x03 ")
+
+			mu.RLock()
+			msg = re.ReplaceAllStringFunc(msg, func(match string) string {
+				name := strings.Trim(match, ":")
+				if replacement, ok := emojiMap[name]; ok {
+					return replacement
+				}
+				return match
+			})
+			mu.RUnlock()
+
+			_, err = s.ChannelMessageSendReply(r.ChannelID, msg, r.Reference())
 			if err != nil {
 				log.Error().Err(err).Msg("Cannot send message")
 			}
@@ -102,6 +122,18 @@ func main() {
 			log.Error().Err(err).Msg("Cannot close Discord session")
 		}
 	}(s)
+
+	guild, err := s.Guild(cfg.DiscordGuild)
+	if err != nil {
+		log.Error().Err(err).Msg("Cannot fetch Discord guild")
+	}
+
+	mu.Lock()
+	for _, e := range guild.Emojis {
+		emojiMap[e.Name] = e.MessageFormat()
+	}
+	log.Info().Int("count", len(emojiMap)).Msg("Emojis loaded")
+	mu.Unlock()
 
 	log.Info().Msg("Bot is now running.")
 
