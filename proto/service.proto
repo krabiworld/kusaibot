@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/krabiworld/kusaibot/proto;proto";
+
+package service;
+
+import "google/protobuf/empty.proto";
+
+service TextChain {
+  rpc Train(TrainRequest) returns (google.protobuf.Empty);
+  rpc NextToken(NextTokenRequest) returns (NextTokenResponse);
+  rpc GenerateTokens(GenerateTokensRequest) returns (GenerateTokensResponse);
+}
+
+message TrainRequest { repeated string sequences = 1; }
+
+message NextTokenRequest { string context = 1; }
+
+message NextTokenResponse { string token = 1; }
+
+message GenerateTokensRequest {
+  string context = 1;
+  optional uint32 limit = 2;
+  optional string break_value = 3;
+}
+
+message GenerateTokensResponse { string text = 1; }

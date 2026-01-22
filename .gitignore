@@ -1,0 +1,8 @@
+# IDE
+.idea
+
+# Protobuf
+*.pb.go
+
+# Secrets
+.env
