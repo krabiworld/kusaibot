@@ -36,7 +36,7 @@ func main() {
 	}
 	defer func(conn *grpc.ClientConn) {
 		if err := conn.Close(); err != nil {
-			log.Fatal().Err(err).Msg("Cannot close gRPC connection")
+			log.Error().Err(err).Msg("Cannot close gRPC connection")
 		}
 	}(conn)
 	rpc := proto.NewTextChainClient(conn)
@@ -78,7 +78,6 @@ func main() {
 
 		if strings.HasPrefix(r.Content, "!k") ||
 			mentioned ||
-			(r.ReferencedMessage != nil && mentioned) ||
 			rand.Intn(50) == 0 {
 			tokens, err := rpc.GenerateTokens(ctx, &proto.GenerateTokensRequest{
 				Context: "\x02",
